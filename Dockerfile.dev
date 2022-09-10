@@ -1,19 +1,32 @@
 FROM python:3.10-slim-bullseye
 
-ENV POETRY_VERSION=1.2.0
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+
+# These are things that are almost non-changes so they sort of be anywhere
 EXPOSE 5000
-# Start from the basics, our requirements, via poetry
-COPY pyproject.toml poetry.lock /workspace/
+ENV POETRY_VERSION=1.2.0
+# We need to install some things as root before we switch users
+RUN apt update && apt install -y curl
+# Establish the runtime user (with no password and no sudo)
+# Careful here, the IDs aren't guaranteed to be for that group/user
+# and who knows what will happen then!
+ARG UID=1001
+ARG GID=1001
+RUN groupadd -f -g ${GID} -o coolgroup
+RUN useradd -m -u ${UID} -g coolgroup -o cooluser
+USER cooluser
+COPY nonprod-bashrc /home/cooluser/.bashrc
+
+
+# Now we start making layers that may change over time
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
 # Create the space we'll start and build from
-COPY . /workspace
-WORKDIR /workspace
+# Note that we have the copy commented out, because it is expected we will mount the code here
+#COPY . /home/cooluser/workspace
 
-#RUN poetry install
-# This is where controversy can happen, we run poetry to run gunicorn
-# which gives us isolation and consistency, but introduces an extra command
-# There is no right answer here, it's shown because of venv isolation is nice
-# but you can effectively treat the whole docker container as a venv if preferred
-#CMD ["poetry", "run", "gunicorn", "-w 4", "coolapp:app"]
-CMD ["/usr/bin/env", "sh"]
+# Start from the basics, our requirements, via poetry
+WORKDIR /home/cooluser/workspace
+COPY pyproject.toml poetry.lock /home/cooluser/workspace/
+RUN /home/cooluser/.local/bin/poetry install -n --only main
+
+CMD ["/usr/bin/env", "bash"]

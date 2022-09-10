@@ -5,11 +5,12 @@ description = "A talk walking through a minimalist production quality python pro
 authors = ["Tod Hansmann <githubpub@todandlorna.com>"]
 license = "CC BY-NC-SA 3.0"
 readme = "README.md"
-packages = [{include = "talk_dockerized_python"}]
+packages = [{include = "coolapp"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 Flask = "^2.2.2"
+gunicorn = "^20.1.0"
 
 
 [build-system]
